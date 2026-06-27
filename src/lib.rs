@@ -82,10 +82,7 @@ macro_rules! bitslice_mutability { //Shared methods
 
             impl <'a,ElementType:BitOps> Index<usize> for BitSlice<'a,ElementType,$pointer_type,$ref_lock> {
                 type Output = bool;
-
-                fn index(&self, index: usize) -> &Self::Output {
-                    if self.get(index) {&true} else {&false}
-                }
+                fn index(&self, index: usize) -> &Self::Output {if self.get(index) {&true} else {&false}}
             }
         )*
     }
