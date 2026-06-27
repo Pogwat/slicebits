@@ -1,16 +1,16 @@
 use core::marker::PhantomData;
 use bit_operations::{BitOps,MutBitProxy};
 
-pub struct BitSlice<'a,ElementType,Pointer> {
+pub struct BitSlice<'a,ElementType,Pointer,L> {
     pub start_ptr: Pointer,
     pub end_ptr: *const ElementType,
     pub start_bit:u8,
     pub end_bit: u8,
-    _life: PhantomData<&'a ElementType>
+    _life: PhantomData<(&'a (),L)>
 }
 
-pub struct Biter<'a, ElementType,Pointer> {
-    pub bit_slice: &'a BitSlice<'a,ElementType,Pointer>,
+pub struct Biter<'a, ElementType,Pointer,L> {
+    pub bit_slice: &'a BitSlice<'a,ElementType,Pointer,L>,
     pub current_bit:u8,
     pub current_pointer:Pointer
 }
@@ -28,7 +28,7 @@ impl <ElementType:BitOps> BitSizes for ElementType {
     const BIT_BITS:usize = Self::TYPE_BITS.ilog2() as usize;
 }
 
-impl<'a, ElementType: BitSizes> Iterator for Biter<'a, ElementType,Immutable<ElementType> > {
+impl<'a, ElementType: BitSizes,L> Iterator for Biter<'a, ElementType,Immutable<ElementType>,L> {
     type Item = bool; // Yields true/false for individual bits
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -41,52 +41,99 @@ impl<'a, ElementType: BitSizes> Iterator for Biter<'a, ElementType,Immutable<Ele
     }
 }
 
+macro_rules! bitslice_mutability { //Shared methods
+    ($(($pointer_type:ty, $ref_lock:ty)),*) => {
+        $(
+            impl <'a,ElementType:BitOps> BitSlice<'a,ElementType,$pointer_type,$ref_lock> {
+                pub fn type_idx(bitdex:usize) -> usize {bitdex/(ElementType::TYPE_BITS)}
+                pub fn type_bit(bitdex:usize) -> u8 {(bitdex%(ElementType::TYPE_BITS)) as u8}
 
-impl <'a,ElementType:BitOps> BitSlice<'a,ElementType,Immutable<ElementType>> {
-    pub fn type_idx(bitdex:usize) -> usize {bitdex/(ElementType::TYPE_BITS)}
-    pub fn type_bit(bitdex:usize) -> u8 {(bitdex%(ElementType::TYPE_BITS)) as u8}
+                pub fn iter(&'a self) -> Biter<'a, ElementType,$pointer_type,$ref_lock> {
+                    Biter {
+                        bit_slice: self,
+                        current_bit: self.start_bit,
+                        current_pointer: self.start_ptr
+                    }
+                }
 
-    pub fn iter(&'a self) -> Biter<'a, ElementType,Immutable<ElementType>> {
-        Biter {
-            bit_slice: &self,
-            current_bit: self.start_bit,
-            current_pointer: self.start_ptr
-        }
-    }
+                pub fn get(&self, bitdex:usize) -> bool {
+                    let (ptr,bit) = self.bitdex_to_valid_ptr_bit(bitdex);
+                    unsafe { (*ptr).get_bit(bit as usize) }
+                }
 
-    pub fn get(&self, bitdex:usize) -> bool {
-        let (ptr,bit) = self.bitdex_to_valid_ptr_bit(bitdex);
-        unsafe { (*ptr).get_bit(bit as usize) }
-    }
+                pub unsafe fn bitdex_to_ptr_bit(&self, bitdex:usize) -> ($pointer_type,u8) {
+                    (unsafe { self.start_ptr.add(Self::type_idx(bitdex)) },Self::type_bit(bitdex))
+                }
 
-    pub unsafe fn bitdex_to_ptr_bit(&self, bitdex:usize) -> (Immutable<ElementType>,u8) {
-        (unsafe { self.start_ptr.add(Self::type_idx(bitdex)) },Self::type_bit(bitdex))
-    }
+                pub fn bitdex_to_valid_ptr_bit(&self, bitdex:usize) -> ($pointer_type,u8) {
+                    let (ptr,bit) = unsafe { self.bitdex_to_ptr_bit(bitdex) };
+                    self.ptr_bit_bounds(ptr,bit);
+                    (ptr,bit)
+                }
 
-    pub fn bitdex_to_valid_ptr_bit(&self, bitdex:usize) -> (Immutable<ElementType>,u8) {
-        let (ptr,bit) = unsafe { self.bitdex_to_ptr_bit(bitdex) };
-        self.ptr_bit_bounds(ptr,bit);
-        (ptr,bit)
-    }
-
-    pub fn ptr_bit_bounds(&self, ptr:Immutable<ElementType>, bit:u8) {
-        if ptr<self.start_ptr || ptr>self.end_ptr {panic!("Pointer OutOfBounds")}
-        else if ptr==self.start_ptr && bit<self.start_bit {panic!("Bit Lower OutOfBounds")}
-        else if ptr == self.end_ptr && bit>self.end_bit {panic!("Bit Upper OutOfBounds")}
+                pub fn ptr_bit_bounds(&self, ptr:Immutable<ElementType>, bit:u8) {
+                    if ptr<self.start_ptr || ptr>self.end_ptr {panic!("Pointer OutOfBounds")}
+                    else if ptr==self.start_ptr && bit<self.start_bit {panic!("Bit Lower OutOfBounds")}
+                    else if ptr == self.end_ptr && bit>self.end_bit {panic!("Bit Upper OutOfBounds")}
+                }
+            }
+        )*
     }
 }
 
+bitslice_mutability!((Immutable<ElementType>,&'a ElementType), (Mutable<ElementType>,&'a mut ElementType));
 
-
-
-impl <'a,ElementType:BitOps> BitSlice<'a,ElementType,Mutable<ElementType>> {
+impl <'a,ElementType:BitOps> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mut ElementType> {
     pub fn set(&mut self, bitdex:usize, val:bool) {
         let (ptr,bit) = self.bitdex_to_valid_ptr_bit(bitdex);
         unsafe { (*ptr).set_bit(bit as usize, val) }
     }
+
+    pub fn iter_mut(&'a self) -> Biter<'a, ElementType,Mutable<ElementType>,&'a mut ElementType> {
+        Biter {
+            bit_slice: self,
+            current_bit: self.start_bit,
+            current_pointer: self.start_ptr
+        }
+    }
 }
 
-// pub trait BitCollection<Type> {}
+pub trait BitCollection<'a,ElementType> {
+    fn new_bitslice(&self) -> BitSlice<'a,ElementType,Immutable<ElementType>,&'a ElementType>;
+    fn new_mut_bitslice(&mut self) -> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mut ElementType>;
+}
+
+macro_rules! bitslice_collections {
+    ( $( (collection:$collection:ty, generics:$($generic:tt)*) ),*) => {
+        $(
+            impl <$($generic)*> BitCollection<'a,ElementType> for $collection {
+                
+                fn new_bitslice(&self) -> BitSlice<'a,ElementType,Immutable<ElementType>,&'a ElementType> {
+                    BitSlice {
+                        start_ptr: &self[0] as *const ElementType,
+                        end_ptr: &self[self.len()-1] as *const ElementType,
+                        start_bit:0,
+                        end_bit: ElementType::TYPE_BITS as u8,
+                        _life: PhantomData
+                    }
+                }
+
+                fn new_mut_bitslice(&mut self) -> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mut ElementType> {
+                    BitSlice {
+                        start_ptr: &mut self[0] as *mut ElementType,
+                        end_ptr: &self[self.len()-1] as *const ElementType,
+                        start_bit:0,
+                        end_bit: ElementType::TYPE_BITS as u8,
+                        _life: PhantomData
+                    }
+                }
+            }
+        )*
+    }
+}
+
+bitslice_collections!( (collection:Vec<ElementType>,generics:'a,ElementType:BitOps),(collection:[ElementType;N],generics:'a,ElementType:BitOps,const N:usize) );
+
 // impl <Type:BitOps>BitCollection<Type> for Vec<Type> {}
 // impl <Type:BitOps,const N:usize>BitCollection<Type> for [Type;N] {}
 
