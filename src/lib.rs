@@ -133,21 +133,3 @@ macro_rules! bitslice_collections {
 }
 
 bitslice_collections!( (collection:Vec<ElementType>,generics:'a,ElementType:BitOps),(collection:[ElementType;N],generics:'a,ElementType:BitOps,const N:usize) );
-
-// impl <Type:BitOps>BitCollection<Type> for Vec<Type> {}
-// impl <Type:BitOps,const N:usize>BitCollection<Type> for [Type;N] {}
-
-
-
-// pub trait BitCollectionOps<'_,ElementType> {
-//     fn biter() -> BitSlice<'_,ElementType,Immutable>;
-//     fn biter_mut() -> BitSlice<'_,ElementType,Mutable>;
-//     fn get(bitdex:usize) -> bool;
-//     fn set(bitdex:usize,val:bool);
-//     //pub fn get_mut(bitdex:usize)-> MutBitProxy<'_,ElementType>;
-// }
-
-//impl <ElementType:BitOps>BitCollectionOps<ElementType> for Vec<ElementType> {}
-
-
-
