@@ -101,8 +101,8 @@ impl <'a,ElementType:BitOps> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mu
 }
 
 pub trait BitCollection<'a,ElementType> {
-    fn new_bitslice(&self) -> BitSlice<'a,ElementType,Immutable<ElementType>,&'a ElementType>;
-    fn new_mut_bitslice(&mut self) -> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mut ElementType>;
+    fn new_bitslice(&'a self) -> BitSlice<'a,ElementType,Immutable<ElementType>,&'a ElementType>;
+    fn new_mut_bitslice(&'a mut self) -> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mut ElementType>;
 }
 
 macro_rules! bitslice_collections {
@@ -110,7 +110,7 @@ macro_rules! bitslice_collections {
         $(
             impl <$($generic)*> BitCollection<'a,ElementType> for $collection {
                 
-                fn new_bitslice(&self) -> BitSlice<'a,ElementType,Immutable<ElementType>,&'a ElementType> {
+                fn new_bitslice(&'a self) -> BitSlice<'a,ElementType,Immutable<ElementType>,&'a ElementType> {
                     BitSlice {
                         start_ptr: &self[0] as *const ElementType,
                         end_ptr: &self[self.len()-1] as *const ElementType,
@@ -120,7 +120,7 @@ macro_rules! bitslice_collections {
                     }
                 }
 
-                fn new_mut_bitslice(&mut self) -> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mut ElementType> {
+                fn new_mut_bitslice(&'a mut self) -> BitSlice<'a,ElementType,Mutable<ElementType>,&'a mut ElementType> {
                     BitSlice {
                         start_ptr: &mut self[0] as *mut ElementType,
                         end_ptr: &self[self.len()-1] as *const ElementType,
