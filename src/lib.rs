@@ -41,7 +41,7 @@ impl<'a, ElementType: BitSizes,L> Iterator for Biter<'a, ElementType,Immutable<E
         self.current_bit&= ((ElementType::TYPE_BITS)-1) as u8; 
         Some(bit)
     }
-}
+}use std::ops::Index;
 
 macro_rules! bitslice_mutability { //Shared methods
     ($(($pointer_type:ty, $ref_lock:ty)),*) => {
@@ -58,25 +58,33 @@ macro_rules! bitslice_mutability { //Shared methods
                     }
                 }
 
-                pub fn get(&self, bitdex:usize) -> bool {
+                pub fn get(&'a self, bitdex:usize) -> bool {
                     let (ptr,bit) = self.bitdex_to_valid_ptr_bit(bitdex);
                     unsafe { (*ptr).get_bit(bit as usize) }
                 }
 
-                pub unsafe fn bitdex_to_ptr_bit(&self, bitdex:usize) -> ($pointer_type,u8) {
+                pub unsafe fn bitdex_to_ptr_bit(&'a self, bitdex:usize) -> ($pointer_type,u8) {
                     (unsafe { self.start_ptr.add(Self::type_idx(bitdex)) },Self::type_bit(bitdex))
                 }
 
-                pub fn bitdex_to_valid_ptr_bit(&self, bitdex:usize) -> ($pointer_type,u8) {
+                pub fn bitdex_to_valid_ptr_bit(&'a self, bitdex:usize) -> ($pointer_type,u8) {
                     let (ptr,bit) = unsafe { self.bitdex_to_ptr_bit(bitdex) };
                     self.ptr_bit_bounds(ptr,bit);
                     (ptr,bit)
                 }
 
-                pub fn ptr_bit_bounds(&self, ptr:Immutable<ElementType>, bit:u8) {
+                pub fn ptr_bit_bounds(&'a self, ptr:Immutable<ElementType>, bit:u8) {
                     if ptr<self.start_ptr || ptr>self.end_ptr {panic!("Pointer OutOfBounds")}
                     else if ptr==self.start_ptr && bit<self.start_bit {panic!("Bit Lower OutOfBounds")}
                     else if ptr == self.end_ptr && bit>self.end_bit {panic!("Bit Upper OutOfBounds")}
+                }
+            }
+
+            impl <'a,ElementType:BitOps> Index<usize> for BitSlice<'a,ElementType,$pointer_type,$ref_lock> {
+                type Output = bool;
+
+                fn index(&self, index: usize) -> &Self::Output {
+                    if self.get(index) {&true} else {&false}
                 }
             }
         )*

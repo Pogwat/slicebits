@@ -67,3 +67,11 @@ fn vec_mut_bitslice() {
 //     vec_bs.get(0);
 // }
 
+#[test]
+fn slicing_index() {
+    let vec:Vec<u8> = vec![1];
+    let vec_bs = vec.new_bitslice();
+    assert_eq!(vec_bs[0],true);
+    assert_eq!(vec_bs[1],false);
+}
+
