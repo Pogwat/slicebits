@@ -2,6 +2,7 @@
 name = "bitslices"
 version = "0.1.0"
 edition = "2024"
+keywords = ["no_std"]
 
 [dependencies]
 bit_operations = "0.1.5"

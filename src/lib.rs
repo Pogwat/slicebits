@@ -1,5 +1,8 @@
+#![no_std]
 use core::marker::PhantomData;
 use bit_operations::{BitOps,MutBitProxy};
+extern crate alloc;
+use alloc::vec::Vec; 
 
 pub struct BitSlice<'a,ElementType,Pointer,L> {
     pub start_ptr: Pointer,
@@ -24,7 +27,7 @@ pub trait BitSizes:BitOps {
 }
 
 impl <ElementType:BitOps> BitSizes for ElementType {
-    const TYPE_BITS: usize = (std::mem::size_of::<ElementType>()*8) as usize;
+    const TYPE_BITS: usize = (core::mem::size_of::<ElementType>()*8) as usize;
     const BIT_BITS:usize = Self::TYPE_BITS.ilog2() as usize;
 }
 
@@ -41,8 +44,8 @@ impl<'a, ElementType: BitSizes,L> Iterator for Biter<'a, ElementType,Immutable<E
         self.current_bit&= ((ElementType::TYPE_BITS)-1) as u8; 
         Some(bit)
     }
-}use std::ops::Index;
-
+}
+use core::ops::Index;
 macro_rules! bitslice_mutability { //Shared methods
     ($(($pointer_type:ty, $ref_lock:ty)),*) => {
         $(
