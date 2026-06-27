@@ -32,7 +32,9 @@ impl<'a, ElementType: BitSizes,L> Iterator for Biter<'a, ElementType,Immutable<E
     type Item = bool; // Yields true/false for individual bits
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_pointer==self.bit_slice.end_ptr && self.current_bit==self.bit_slice.end_bit {return None}
+        let ptr_offsert = (self.bit_slice.end_bit+1) as usize/ElementType::TYPE_BITS;
+        let end_bit = (self.bit_slice.end_bit+1)&((ElementType::TYPE_BITS-1 )as u8) ;
+        if self.current_pointer>=unsafe{self.bit_slice.end_ptr.add(ptr_offsert)} && self.current_bit>=end_bit {return None}
         let bit = unsafe{(*self.current_pointer).get_bit(self.current_bit as usize)};
         self.current_bit += 1;
         self.current_pointer = unsafe {self.current_pointer.add(self.current_bit as usize>>ElementType::BIT_BITS)};
@@ -113,7 +115,7 @@ macro_rules! bitslice_collections {
                         start_ptr: &self[0] as *const ElementType,
                         end_ptr: &self[self.len()-1] as *const ElementType,
                         start_bit:0,
-                        end_bit: ElementType::TYPE_BITS as u8,
+                        end_bit: ElementType::TYPE_BITS as u8-1,
                         _life: PhantomData
                     }
                 }
@@ -123,7 +125,7 @@ macro_rules! bitslice_collections {
                         start_ptr: &mut self[0] as *mut ElementType,
                         end_ptr: &self[self.len()-1] as *const ElementType,
                         start_bit:0,
-                        end_bit: ElementType::TYPE_BITS as u8,
+                        end_bit: ElementType::TYPE_BITS as u8-1,
                         _life: PhantomData
                     }
                 }
