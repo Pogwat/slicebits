@@ -5,6 +5,7 @@ a wrapper around slices
 Diffrent form version 1.0.0, everything now is in one unified struct BitSlice
 
 ## Examples
+Note: Bits are 0 indexed
 
 Get A bitslice
 ```rust
@@ -12,6 +13,14 @@ Get A bitslice
     let mut array: [u8;2] = [1,2];
     let immutable_bitslice = BitSlice::new(&array); //Immutable BitSlice
     let mutable_bitslice = BitSlice::new(&mut array); //Mutable BitSlice
+```
+
+Get A bitslice with a custom start and end bit (unsafe)
+```rust
+    use slicebits::BitSlice;
+    let array:[u8;2] = [1,u8::MAX];
+    let mut bs = unsafe { BitSlice::new_uncheked(&array,2,6)}; //BitSlice from type that can be sliced, start bit and end bit (in elements). bit positions are 0 indexed 
+    assert_eq!(bs.len(), 8-2 + 8-1);
 ```
 
 Get And Set bits in a BitSlice
