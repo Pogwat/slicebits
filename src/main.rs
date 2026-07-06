@@ -1,40 +1,25 @@
 use bit_operations::{BitOps,MutBitProxy};
 use biter::{Biter,MutBiter};
 use core::marker::PhantomData;
-struct BitSlice<'a,ElementType,S> {
-    slice:S,
+/// A BitSlice
+pub struct BitSlice<'a,ElementType,S> {
+    pub slice:S,
     start_bit:u8,
     end_bit:u8,
     _life: PhantomData<&'a ElementType>
 }
 
-pub trait ImmutableBitSlice<ElementType:BitOps, S:AsRef<[ElementType]>>:Sized {
-    fn bounds(&self,bit:usize); 
-    fn len(&self) -> usize;
-    fn bits_idx(bit:usize) -> usize;
-    fn bits_bit(bit:usize) -> usize;
-    fn get(&self,bit:usize) -> bool;
-    fn new(slice:S, start_bit:usize, end_bit:usize) -> Self;
-    fn iter<'short>(&'short self) -> Biter<'short,ElementType>;
-}
-
-pub trait MutableBitSlice<ElementType:BitOps, S:AsMut<[ElementType]>+AsRef<[ElementType]>> {
-    fn set(&mut self,bit:usize, val:bool);
-    fn get_mut<'short>(&'short mut self, bit:usize) -> MutBitProxy<'short,ElementType>;
-    fn iter_mut<'short>(&'short mut self) -> MutBiter<'short, ElementType>;
-}
-
-impl <'a,ElementType:BitOps,S:AsRef<[ElementType]>> ImmutableBitSlice<ElementType,S> for BitSlice<'a,ElementType,S> {
+impl <'a,ElementType:BitOps,S:AsRef<[ElementType]>> BitSlice<'a,ElementType,S> {
     fn bounds(&self,bit:usize) {if bit>=self.len() {panic!("Bit: {} is out of bounds as its greater than len: {}",bit,self.len())}}
     fn len(&self) -> usize {(self.slice.as_ref().len()-1)*ElementType::TYPE_BITS+(self.end_bit-self.start_bit) as usize+1}
     fn bits_idx(bit:usize) -> usize {bit/ElementType::TYPE_BITS}
     fn bits_bit(bit:usize) -> usize {bit%ElementType::TYPE_BITS}
     fn get(&self,bit:usize) -> bool {self.slice.as_ref()[Self::bits_idx(bit)].get_bit(Self::bits_bit(bit))}
-    fn new(slice:S, start_bit:usize, end_bit:usize,) -> Self {Self {slice, start_bit:start_bit as u8, end_bit:end_bit as u8, _life: PhantomData}}
+    unsafe fn new(slice:S, start_bit:usize, end_bit:usize) -> Self {Self {slice, start_bit:start_bit as u8, end_bit:end_bit as u8, _life: PhantomData}}
     fn iter<'short>(&'short self) -> Biter<'short,ElementType> {Biter::from(self)}
 }
 
-impl <'a,ElementType:BitOps,S:AsMut<[ElementType]>+AsRef<[ElementType]>> MutableBitSlice<ElementType, S> for BitSlice<'a,ElementType,S> {
+impl <'a,ElementType:BitOps,S:AsMut<[ElementType]>+AsRef<[ElementType]>> BitSlice<'a,ElementType,S> {
     fn set(&mut self,bit:usize, val:bool) {self.slice.as_mut()[Self::bits_idx(bit)].set_bit(Self::bits_bit(bit),val)}
     fn get_mut<'short>(&'short mut self, bit:usize) -> MutBitProxy<'short,ElementType> {self.slice.as_mut()[Self::bits_idx(bit)].mut_bit(Self::bits_bit(bit))}
     fn iter_mut<'short>(&'short mut self) -> MutBiter<'short,ElementType> {MutBiter::from(self)}
@@ -55,7 +40,7 @@ impl <'short, 'long, ElementType: BitOps,S:AsRef<[ElementType]> + AsMut<[Element
 fn main() {
     println!("Hello, world!");
     let slice = &mut [1_u8,u8::MAX][0..=1];
-    let mut bs = BitSlice::new(slice,0,7);
+    let mut bs = unsafe {BitSlice::new(slice,0,7)};
     assert_eq!(bs.get(0),true);
     {bs.get_mut(0);}
     assert_eq!(bs.get(1),false);
