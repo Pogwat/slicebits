@@ -58,6 +58,7 @@ Iterate over bits in a Bitslice
     assert_eq!(bitslice.len(),2*8); //Number of bits in BitSlice, Impl for Mutable and Immutable BitSlices
 ```
 
-for full docs use docs.rs : [docs](https://docs.rs/slicebits/latest/slicebits/)
+for full docs use docs.rs : [docs](https://docs.rs/slicebits/latest/)
+for docs for Biters or BitOps from my other crates use their docs: [biter](https://docs.rs/biter/latest/), [bit_operations](https://docs.rs/bit_operations/latest/)
 
 
