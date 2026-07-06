@@ -1,7 +1,12 @@
 [package]
-name = "bitslices2"
-version = "0.1.0"
+name = "slicebits"
+version = "0.1.1"
 edition = "2024"
+keywords = ["no_std", "bit", "slice"]
+description = "turn any slice into a slice of bits (without mutation, consumption or cloning)"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/Pogwat/bitslices"
 
 [dependencies]
 bit_operations = "0.1.6"

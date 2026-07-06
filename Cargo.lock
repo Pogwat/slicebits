@@ -18,8 +18,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitslices2"
-version = "0.1.0"
+name = "slicebits"
+version = "0.1.1"
 dependencies = [
  "bit_operations",
  "biter",
